@@ -67,3 +67,9 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+.vercel
+
+# Exclude sensitive files and dependencies
+.env
+.DS_Store
+.vercel

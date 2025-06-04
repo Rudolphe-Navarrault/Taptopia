@@ -1,24 +1,22 @@
 {
-  "name": "idle_clicker",
+  "name": "idle-clicker",
   "version": "1.0.0",
-  "description": "Un jeu idle clicker en ligne",
+  "description": "Idle Clicker Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "connect-mongo": "^5.0.0",
-    "dotenv": "^16.3.1",
-    "ejs": "^3.1.9",
     "express": "^4.18.2",
-    "express-ejs-layouts": "^2.5.1",
-    "express-session": "^1.17.3",
-    "mongoose": "^7.6.3",
-    "serverless-http": "^3.2.0"
+    "mongoose": "^7.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
