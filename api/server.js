@@ -1,3 +1,4 @@
+const serverless = require("serverless-http");
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
@@ -412,3 +413,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
 });
+
+module.exports.handler = serverless(app);
