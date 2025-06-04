@@ -10,42 +10,61 @@ require("dotenv").config();
 
 const app = express();
 
-// Configuration de la base de données
-mongoose.connect(
-  process.env.MONGODB_URI ||
-    "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0",
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }
-);
+// Configuration de la base de données avec gestion d'erreur
+mongoose
+  .connect(
+    process.env.MONGODB_URI ||
+      "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0",
+    {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    }
+  )
+  .then(() => {
+    console.log("Connecté à MongoDB");
+  })
+  .catch((err) => {
+    console.error("Erreur de connexion à MongoDB:", err);
+  });
 
 // Configuration des middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
 
 // Configuration des sessions avec MongoDB
+const sessionStore = MongoStore.create({
+  mongoUrl:
+    process.env.MONGODB_URI ||
+    "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0",
+  ttl: 24 * 60 * 60, // 1 jour
+});
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "votre_secret_tres_securise",
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl:
-        process.env.MONGODB_URI ||
-        "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0",
-    }),
+    store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 24 heures
-      secure: process.env.NODE_ENV === "production", // Secure en production
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
     },
   })
 );
 
+// Configuration du moteur de template
+app.use(expressLayouts);
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.set("layout", "layout");
+
+// Servir les fichiers statiques
+app.use(express.static(path.join(__dirname, "public")));
+
 // Middleware pour gérer les erreurs JSON
 app.use((err, req, res, next) => {
+  console.error("Erreur JSON:", err);
   if (req.path.startsWith("/api/")) {
     res.status(500).json({ error: err.message });
   } else {
@@ -111,12 +130,6 @@ app.post("/api/test/add-data", isAuthenticated, async (req, res) => {
       .json({ error: "Erreur lors de l'ajout des données de test" });
   }
 });
-
-// Configuration du moteur de template
-app.use(expressLayouts);
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
-app.set("layout", "layout");
 
 // Routes de vues
 app.get("/", (req, res) => {
@@ -419,14 +432,27 @@ app.use((req, res) => {
 
 // Gestion des erreurs globales
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("Erreur globale:", err);
   res.status(500).render("error", {
     message: "Une erreur est survenue",
   });
 });
 
 // Export pour Vercel
-module.exports.handler = serverless(app);
+const handler = serverless(app);
+
+// Wrapper pour gérer les erreurs de connexion MongoDB
+module.exports.handler = async (event, context) => {
+  try {
+    return await handler(event, context);
+  } catch (error) {
+    console.error("Erreur serveurless:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Erreur interne du serveur" }),
+    };
+  }
+};
 
 // Démarrage du serveur en développement
 if (process.env.NODE_ENV !== "production") {
