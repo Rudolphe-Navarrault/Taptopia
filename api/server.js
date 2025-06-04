@@ -5,7 +5,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const path = require("path");
 const expressLayouts = require("express-ejs-layouts");
-const User = require("./models/User");
+const User = require("../models/User");
 require("dotenv").config();
 
 const app = express();
