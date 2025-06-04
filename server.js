@@ -9,7 +9,7 @@ require("dotenv").config();
 
 const app = express();
 
-// Configuration de la base de données
+// Configuration de la base de données.
 mongoose.connect(
   process.env.MONGODB_URI ||
     "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0",
