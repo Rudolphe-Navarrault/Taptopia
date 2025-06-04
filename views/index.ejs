@@ -1,0 +1,30 @@
+<div class="hero">
+  <h1>Bienvenue dans Idle Clicker</h1>
+  <p>Le jeu où vous pouvez devenir riche sans effort !</p>
+  <div class="cta-buttons">
+    <% if (typeof userId !== 'undefined' && userId) { %>
+    <a href="/dashboard" class="btn btn-primary">Dashboard</a>
+    <% } else { %>
+    <a href="/register" class="btn btn-primary">Commencer</a>
+    <a href="/login" class="btn btn-secondary">Se connecter</a>
+    <% } %>
+  </div>
+</div>
+
+<section class="features">
+  <h2>Fonctionnalités</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h3>Gagnez des pièces</h3>
+      <p>Cliquez pour gagner des pièces et améliorer votre score</p>
+    </div>
+    <div class="feature-card">
+      <h3>Améliorations</h3>
+      <p>Débloquez des améliorations pour augmenter vos gains</p>
+    </div>
+    <div class="feature-card">
+      <h3>Classement</h3>
+      <p>Comparez votre score avec d'autres joueurs</p>
+    </div>
+  </div>
+</section>

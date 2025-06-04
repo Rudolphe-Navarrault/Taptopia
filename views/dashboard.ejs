@@ -1,0 +1,268 @@
+<!-- Conteneur de notifications -->
+<div class="notifications-container"></div>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-icons">
+    <button class="sidebar-icon" data-menu="upgrades">
+      <i class="fas fa-arrow-up"></i>
+    </button>
+    <button class="sidebar-icon" data-menu="achievements">
+      <i class="fas fa-trophy"></i>
+    </button>
+    <button class="sidebar-icon" data-menu="settings">
+      <i class="fas fa-cog"></i>
+    </button>
+  </div>
+
+  <div class="sidebar-menu">
+    <!-- Menu des améliorations -->
+    <div class="menu-content" id="upgrades-menu">
+      <h3 data-translate="upgrades">Améliorations</h3>
+      <div class="upgrades-grid">
+        <div class="upgrade-card">
+          <h4 data-translate="clickPower">Puissance de clic</h4>
+          <p>
+            <span data-translate="level">Niveau :</span>
+            <span id="click-power-level">1</span>
+          </p>
+          <p>
+            <span data-translate="cost">Coût :</span>
+            <span id="click-power-cost">10</span>
+          </p>
+          <button
+            class="upgrade-button"
+            data-upgrade="clickPower"
+            data-translate="buy"
+          >
+            Acheter
+          </button>
+        </div>
+        <div class="upgrade-card">
+          <h4 data-translate="autoClicker">Auto-cliqueur</h4>
+          <p>
+            <span data-translate="level">Niveau :</span>
+            <span id="auto-clicker-level">0</span>
+          </p>
+          <p>
+            <span data-translate="cost">Coût :</span>
+            <span id="auto-clicker-cost">50</span>
+          </p>
+          <button
+            class="upgrade-button"
+            data-upgrade="autoClicker"
+            data-translate="buy"
+          >
+            Acheter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu des succès -->
+    <div class="menu-content" id="achievements-menu">
+      <h3 data-translate="achievements">Succès</h3>
+      <p data-translate="comingSoon">Bientôt disponible...</p>
+    </div>
+
+    <!-- Menu des paramètres -->
+    <div class="menu-content" id="settings-menu">
+      <h3 data-translate="settings">Paramètres</h3>
+      <div class="settings-dropdown">
+        <div class="settings-section">
+          <div class="settings-item">
+            <label for="language-select" data-translate="language"
+              >Langue</label
+            >
+            <select id="language-select" class="settings-select">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <div class="settings-item">
+            <label for="theme-select" data-translate="theme">Thème</label>
+            <select id="theme-select" class="settings-select">
+              <option value="light" data-translate="lightTheme">Clair</option>
+              <option value="dark" data-translate="darkTheme">Sombre</option>
+            </select>
+          </div>
+
+          <div class="settings-item">
+            <label data-translate="autoSave">Sauvegarde automatique</label>
+            <div class="settings-value-container">
+              <select id="auto-save-select" class="settings-select">
+                <option value="0" data-translate="autoSaveDisabled">
+                  Désactivée
+                </option>
+                <option value="5" data-translate="autoSave5Sec">
+                  Toutes les 5 secondes
+                </option>
+                <option value="10" data-translate="autoSave10Sec">
+                  Toutes les 10 secondes
+                </option>
+                <option value="15" data-translate="autoSave15Sec">
+                  Toutes les 15 secondes
+                </option>
+                <option value="30" data-translate="autoSave30Sec">
+                  Toutes les 30 secondes
+                </option>
+                <option value="60" data-translate="autoSave1Min">
+                  Toutes les minutes
+                </option>
+                <option value="300" data-translate="autoSave5Min">
+                  Toutes les 5 minutes
+                </option>
+                <option value="900" data-translate="autoSave15Min">
+                  Toutes les 15 minutes
+                </option>
+                <option value="1800" data-translate="autoSave30Min">
+                  Toutes les 30 minutes
+                </option>
+                <option value="3600" data-translate="autoSave1Hour">
+                  Toutes les heures
+                </option>
+              </select>
+            </div>
+            <span id="auto-save-timer"></span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-item notifications-item">
+            <label for="notifications-toggle" data-translate="notifications"
+              >Notifications</label
+            >
+            <label class="switch">
+              <input type="checkbox" id="notifications-toggle" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <button
+          id="save-settings"
+          class="btn btn-primary"
+          data-translate="save"
+        >
+          Sauvegarder
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contenu principal -->
+<div class="main-content">
+  <div class="game-stats">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3 data-translate="coins">Pièces</h3>
+        <p id="coins">0</p>
+      </div>
+      <div class="stat-card">
+        <h3 data-translate="coinsPerClick">Pièces par clic</h3>
+        <p id="coins-per-click">1</p>
+      </div>
+      <div class="stat-card">
+        <h3 data-translate="coinsPerSecond">Pièces par seconde</h3>
+        <p id="coins-per-second">0</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-area">
+    <div class="click-area">
+      <button id="click-button">
+        <i class="fas fa-coins"></i>
+        <span data-translate="clickMe">Cliquez-moi!</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Bouton de sauvegarde -->
+  <div class="save-container">
+    <button id="save-game" class="btn-primary" data-translate="saveGame">
+      <i class="fas fa-save"></i> Sauvegarder
+    </button>
+    <span id="last-save" class="last-save-text" data-translate="lastSave"
+      >Dernière sauvegarde: Jamais</span
+    >
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/js/all.min.js"></script>
+
+<!-- Translations -->
+<script type="module" src="/js/translations/fr.js"></script>
+<script type="module" src="/js/translations/en.js"></script>
+<script type="module" src="/js/translations/index.js"></script>
+
+<!-- Main script -->
+<script src="/js/main.js"></script>
+
+<script>
+  // Initialisation du menu au chargement
+  document.addEventListener("DOMContentLoaded", function () {
+    const sidebarMenu = document.querySelector(".sidebar-menu");
+    const mainContent = document.querySelector(".main-content");
+    const nav = document.querySelector("nav");
+    const footer = document.querySelector("footer");
+    let menuTimeout;
+
+    // Cacher tous les menus au démarrage
+    document.querySelectorAll(".menu-content").forEach((menu) => {
+      menu.style.display = "none";
+    });
+
+    // Gestion du survol des icônes
+    document.querySelectorAll(".sidebar-icon").forEach((icon) => {
+      const menuId = icon.dataset.menu + "-menu";
+      const menu = document.getElementById(menuId);
+
+      icon.addEventListener("mouseenter", () => {
+        clearTimeout(menuTimeout);
+        // Cacher tous les menus
+        document.querySelectorAll(".menu-content").forEach((m) => {
+          m.style.display = "none";
+        });
+        // Afficher le menu correspondant
+        menu.style.display = "block";
+        sidebarMenu.classList.add("active");
+        mainContent.classList.add("menu-open");
+        nav.classList.add("menu-open");
+        footer.classList.add("menu-open");
+      });
+
+      icon.addEventListener("mouseleave", () => {
+        menuTimeout = setTimeout(() => {
+          sidebarMenu.classList.remove("active");
+          mainContent.classList.remove("menu-open");
+          nav.classList.remove("menu-open");
+          footer.classList.remove("menu-open");
+        }, 100);
+      });
+    });
+
+    // Gestion de la sortie du menu
+    sidebarMenu.addEventListener("mouseleave", () => {
+      menuTimeout = setTimeout(() => {
+        sidebarMenu.classList.remove("active");
+        mainContent.classList.remove("menu-open");
+        nav.classList.remove("menu-open");
+        footer.classList.remove("menu-open");
+      }, 100);
+    });
+
+    // Gestion de l'entrée dans le menu
+    sidebarMenu.addEventListener("mouseenter", () => {
+      clearTimeout(menuTimeout);
+    });
+
+    // Afficher le menu des améliorations par défaut
+    const upgradesMenu = document.getElementById("upgrades-menu");
+    if (upgradesMenu) {
+      upgradesMenu.style.display = "block";
+    }
+  });
+</script>

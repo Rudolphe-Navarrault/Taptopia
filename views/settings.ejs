@@ -1,0 +1,149 @@
+<!-- Conteneur de notifications -->
+<div class="notifications-container"></div>
+
+<div class="settings-container">
+  <h2 data-translate="settings">Paramètres</h2>
+
+  <form id="settings-form" class="settings-form">
+    <div class="settings-section">
+      <h3 data-translate="language">Langue</h3>
+      <div class="form-group">
+        <select id="language" name="language">
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-translate="theme">Thème</h3>
+      <div class="form-group">
+        <select id="theme" name="theme">
+          <option value="light" data-translate="lightTheme">Clair</option>
+          <option value="dark" data-translate="darkTheme">Sombre</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-translate="autoSave">Sauvegarde automatique</h3>
+      <div class="form-group">
+        <label for="auto-save-select" data-translate="autoSave"
+          >Sauvegarde automatique</label
+        >
+        <div class="settings-value-container">
+          <select id="auto-save-select" name="autoSave" class="settings-select">
+            <option value="0" data-translate="autoSaveDisabled">
+              Désactivée
+            </option>
+            <option value="5" data-translate="autoSave5Sec">
+              Toutes les 5 secondes
+            </option>
+            <option value="10" data-translate="autoSave10Sec">
+              Toutes les 10 secondes
+            </option>
+            <option value="15" data-translate="autoSave15Sec">
+              Toutes les 15 secondes
+            </option>
+            <option value="30" data-translate="autoSave30Sec">
+              Toutes les 30 secondes
+            </option>
+            <option value="60" data-translate="autoSave1Min">
+              Toutes les minutes
+            </option>
+            <option value="300" data-translate="autoSave5Min">
+              Toutes les 5 minutes
+            </option>
+            <option value="900" data-translate="autoSave15Min">
+              Toutes les 15 minutes
+            </option>
+            <option value="1800" data-translate="autoSave30Min">
+              Toutes les 30 minutes
+            </option>
+            <option value="3600" data-translate="autoSave1Hour">
+              Toutes les heures
+            </option>
+          </select>
+        </div>
+        <span id="auto-save-timer" class="auto-save-timer"></span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-translate="notifications">Notifications</h3>
+      <div class="form-group">
+        <label class="switch">
+          <input type="checkbox" id="notifications" name="notifications" />
+          <span class="slider round"></span>
+        </label>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" data-translate="save">
+      Sauvegarder
+    </button>
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Charger les paramètres actuels
+    try {
+      const response = await fetch("/api/settings");
+      if (response.ok) {
+        const settings = await response.json();
+        document.getElementById("language").value = settings.language;
+        document.getElementById("theme").value = settings.theme;
+        document.getElementById("notifications").checked =
+          settings.notifications;
+        // S'assurer que la valeur est une chaîne de caractères
+        const autoSaveValue = (settings.autoSave || "0").toString();
+        document.getElementById("auto-save-select").value = autoSaveValue;
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des paramètres:", error);
+    }
+
+    // Gérer la soumission du formulaire
+    document
+      .getElementById("settings-form")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const settings = {
+          language: document.getElementById("language").value,
+          theme: document.getElementById("theme").value,
+          notifications: document.getElementById("notifications").checked,
+          autoSave: document.getElementById("auto-save-select").value,
+        };
+
+        try {
+          const response = await fetch("/api/settings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(settings),
+          });
+
+          if (response.ok) {
+            // Appliquer les changements immédiatement
+            document.documentElement.lang = settings.language;
+            document.body.className = settings.theme;
+
+            // Afficher une notification de succès
+            const notification = document.createElement("div");
+            notification.className = "notification success";
+            notification.textContent = "Paramètres enregistrés avec succès !";
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+              notification.remove();
+            }, 3000);
+          }
+        } catch (error) {
+          console.error("Erreur lors de la sauvegarde des paramètres:", error);
+        }
+      });
+  });
+</script>

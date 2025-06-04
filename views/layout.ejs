@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Idle Clicker</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="page-container">
+      <nav>
+        <div class="nav-container">
+          <a href="/" class="logo">Idle Clicker</a>
+          <div class="nav-links">
+            <% if (typeof userId !== 'undefined' && userId) { %>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/settings">Paramètres</a>
+            <a href="/auth/logout">Déconnexion</a>
+            <% } else { %>
+            <a href="/login">Connexion</a>
+            <a href="/register">Inscription</a>
+            <% } %>
+          </div>
+        </div>
+      </nav>
+
+      <main><%- body %></main>
+
+      <footer>
+        <p>&copy; 2025 Idle Clicker. Tous droits réservés.</p>
+      </footer>
+    </div>
+
+    <script src="/js/main.js"></script>
+  </body>
+</html>
