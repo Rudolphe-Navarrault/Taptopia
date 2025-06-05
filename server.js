@@ -1,4 +1,3 @@
-const serverless = require("serverless-http");
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
@@ -10,68 +9,34 @@ require("dotenv").config();
 
 const app = express();
 
-// Configuration de la connexion MongoDB avec timeout
-mongoose.set("strictQuery", false);
+// Connexion MongoDB classique
 const MONGODB_URI =
   process.env.MONGODB_URI ||
   "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0";
 
-// Gestion du cache de connexion MongoDB pour éviter les timeouts sur Vercel
-let cached = global.mongoose;
+mongoose.set("strictQuery", false);
 
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-async function connectToDatabase() {
-  if (cached.conn) {
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      serverSelectionTimeoutMS: 5000, // Timeout après 5 secondes
-      socketTimeoutMS: 45000, // Timeout socket après 45 secondes
-      maxPoolSize: 10,
-      minPoolSize: 5,
-      maxIdleTimeMS: 60000,
-      connectTimeoutMS: 10000,
-    };
-
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
-  }
-
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
-
-  return cached.conn;
-}
-
-// Connexion MongoDB au démarrage (une seule fois)
-console.log("Création nouvelle connexion MongoDB...");
-connectToDatabase()
-  .then(() => {
-    console.log("Connexion MongoDB établie");
+mongoose
+  .connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    minPoolSize: 5,
+    maxIdleTimeMS: 60000,
+    connectTimeoutMS: 10000,
   })
-  .catch((err) => {
-    console.error("Erreur de connexion MongoDB:", err);
-  });
+  .then(() => console.log("Connexion MongoDB établie"))
+  .catch((err) => console.error("Erreur de connexion MongoDB:", err));
 
-// Configuration des middlewares
+// Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuration des sessions avec MongoDB
+// Sessions avec MongoDB
 const sessionStore = MongoStore.create({
   mongoUrl: MONGODB_URI,
   ttl: 24 * 60 * 60, // 1 jour
-  touchAfter: 24 * 3600, // 24 heures
+  touchAfter: 24 * 3600,
   autoRemove: "native",
   crypto: {
     secret: process.env.SESSION_SECRET || "votre_secret_tres_securise",
@@ -92,16 +57,16 @@ app.use(
   })
 );
 
-// Configuration du moteur de template
+// Moteur de template
 app.use(expressLayouts);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.set("layout", "layout");
 
-// Servir les fichiers statiques
+// Fichiers statiques
 app.use(express.static(path.join(__dirname, "public")));
 
-// Middleware pour gérer les erreurs JSON
+// Gestion des erreurs JSON
 app.use((err, req, res, next) => {
   console.error("Erreur JSON:", err);
   if (req.path.startsWith("/api/")) {
@@ -111,7 +76,7 @@ app.use((err, req, res, next) => {
   }
 });
 
-// Middleware pour passer userId à toutes les vues
+// Passer userId aux vues
 app.use((req, res, next) => {
   res.locals.userId = req.session.userId;
   next();
@@ -347,59 +312,41 @@ app.get("/api/settings", isAuthenticated, async (req, res) => {
     res.json(user.settings);
   } catch (error) {
     console.error("Erreur lors de la récupération des paramètres:", error);
-    res.status(500).json({ message: "Erreur serveur" });
+    res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des paramètres" });
   }
 });
 
 app.post("/api/settings", isAuthenticated, async (req, res) => {
   try {
-    const { language, theme, notifications, autoSave } = req.body;
+    const { settings } = req.body;
     const user = await User.findById(req.session.userId);
 
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    user.settings = {
-      language: language || "fr",
-      theme: theme || "light",
-      notifications: notifications !== undefined ? notifications : true,
-      autoSave: autoSave || "0",
-    };
-
+    user.settings = settings;
     await user.save();
-    console.log("Paramètres sauvegardés:", user.settings);
-    res.json(user.settings);
+
+    res.json({ message: "Paramètres mis à jour" });
   } catch (error) {
     console.error("Erreur lors de la mise à jour des paramètres:", error);
-    res.status(500).json({ message: "Erreur serveur" });
+    res
+      .status(500)
+      .json({ error: "Erreur lors de la mise à jour des paramètres" });
   }
 });
 
-app.get("/settings", isAuthenticated, async (req, res) => {
-  try {
-    const user = await User.findById(req.session.userId);
-    if (!user) {
-      req.session.destroy();
-      return res.redirect("/login");
-    }
-    res.render("settings", { user });
-  } catch (error) {
-    console.error("Erreur lors du chargement des paramètres:", error);
-    res.status(500).render("error", {
-      message: "Erreur lors du chargement des paramètres",
-    });
-  }
-});
-
-// Gestion des erreurs 404
+// Page 404
 app.use((req, res) => {
   res.status(404).render("error", {
     message: "Page non trouvée",
   });
 });
 
-// Gestion des erreurs globales
+// Gestion globale des erreurs
 app.use((err, req, res, next) => {
   console.error("Erreur globale:", err);
   res.status(500).render("error", {
@@ -407,6 +354,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Export pour Vercel sans reconnecter MongoDB à chaque requête
-const handler = serverless(app);
-module.exports = handler;
+// Lancement du serveur
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
+});
