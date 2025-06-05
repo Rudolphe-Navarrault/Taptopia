@@ -183,8 +183,31 @@ app.post("/auth/login", async (req, res) => {
         .render("login", { error: "Email ou mot de passe incorrect" });
     }
 
-    req.session.userId = user._id;
-    res.redirect("/dashboard");
+    // Créer une nouvelle session
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error("Erreur lors de la régénération de la session:", err);
+        return res.status(500).render("login", {
+          error: "Une erreur est survenue lors de la connexion",
+        });
+      }
+
+      // Stocker l'ID de l'utilisateur dans la session
+      req.session.userId = user._id;
+
+      // Sauvegarder la session
+      req.session.save((err) => {
+        if (err) {
+          console.error("Erreur lors de la sauvegarde de la session:", err);
+          return res.status(500).render("login", {
+            error: "Une erreur est survenue lors de la connexion",
+          });
+        }
+
+        // Rediriger vers le dashboard
+        res.redirect("/dashboard");
+      });
+    });
   } catch (error) {
     console.error("Erreur lors de la connexion:", error);
     res.status(500).render("login", {
