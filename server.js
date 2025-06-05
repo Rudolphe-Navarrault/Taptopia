@@ -38,9 +38,9 @@ const sessionStore = MongoStore.create({
   ttl: 24 * 60 * 60, // 1 jour
   touchAfter: 24 * 3600,
   autoRemove: "native",
-  crypto: {
+  /* crypto: {
     secret: process.env.SESSION_SECRET || "votre_secret_tres_securise",
-  },
+  }, */
 });
 
 app.use(
