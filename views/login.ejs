@@ -3,7 +3,7 @@
   <% if (typeof error !== 'undefined' && error) { %>
   <div class="error-message"><%= error %></div>
   <% } %>
-  <form action="/auth/login" method="POST" class="auth-form">
+  <form action="/auth/login" method="POST" class="auth-form" id="login-form">
     <div class="form-group">
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required />
@@ -18,3 +18,45 @@
     Pas encore de compte ? <a href="/register">S'inscrire</a>
   </p>
 </div>
+
+<script>
+  document
+    .getElementById("login-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const response = await fetch("/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Redirection vers le dashboard
+          window.location.href = data.redirectUrl;
+        } else {
+          // Afficher l'erreur
+          const errorDiv = document.getElementById("error-message");
+          if (errorDiv) {
+            errorDiv.textContent = data.error || "Une erreur est survenue";
+            errorDiv.style.display = "block";
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la connexion:", error);
+        const errorDiv = document.getElementById("error-message");
+        if (errorDiv) {
+          errorDiv.textContent = "Une erreur est survenue lors de la connexion";
+          errorDiv.style.display = "block";
+        }
+      }
+    });
+</script>

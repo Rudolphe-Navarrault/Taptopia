@@ -43,18 +43,16 @@ const sessionStore = MongoStore.create({
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "votre_secret_tres_securise",
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 24 heures
       secure: process.env.NODE_ENV === "production", // true en production
-      sameSite: "none", // Nécessaire pour HTTPS
+      sameSite: "lax",
       httpOnly: true,
-      domain:
-        process.env.NODE_ENV === "production" ? ".onrender.com" : undefined,
     },
-    proxy: true, // Nécessaire car Render utilise un proxy
+    proxy: true,
   })
 );
 
@@ -223,27 +221,22 @@ app.post("/auth/login", async (req, res) => {
       return res.status(400).json({ error: "Email ou mot de passe incorrect" });
     }
 
-    // Créer une nouvelle session
-    req.session.regenerate((err) => {
+    // Stocker l'ID de l'utilisateur dans la session
+    req.session.userId = user._id;
+    console.log("Session créée avec l'ID:", user._id);
+
+    // Sauvegarder la session
+    req.session.save((err) => {
       if (err) {
-        console.error("Erreur lors de la régénération de la session:", err);
+        console.error("Erreur lors de la sauvegarde de la session:", err);
         return res.status(500).json({ error: "Erreur lors de la connexion" });
       }
 
-      // Stocker l'ID de l'utilisateur dans la session
-      req.session.userId = user._id;
-      console.log("Session créée avec l'ID:", user._id);
-
-      // Sauvegarder la session
-      req.session.save((err) => {
-        if (err) {
-          console.error("Erreur lors de la sauvegarde de la session:", err);
-          return res.status(500).json({ error: "Erreur lors de la connexion" });
-        }
-
-        console.log("Session sauvegardée avec succès");
-        // Rediriger directement vers le dashboard
-        res.redirect("/dashboard");
+      console.log("Session sauvegardée avec succès");
+      // Renvoyer une réponse JSON avec l'URL de redirection
+      res.json({
+        success: true,
+        redirectUrl: "/dashboard",
       });
     });
   } catch (error) {
