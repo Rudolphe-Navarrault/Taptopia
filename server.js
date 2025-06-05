@@ -339,19 +339,74 @@ app.post("/api/settings", isAuthenticated, async (req, res) => {
   }
 });
 
+// Route pour sauvegarder l'état du jeu
+app.post("/api/save", isAuthenticated, async (req, res) => {
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+
+    const { coins, upgrades, lastSaveTime } = req.body;
+
+    // Vérifier que les données sont valides
+    if (typeof coins !== "number" || !upgrades) {
+      return res.status(400).json({ error: "Données invalides" });
+    }
+
+    // Mettre à jour les données du jeu
+    user.gameData.coins = coins;
+    user.gameData.upgrades = upgrades;
+    if (lastSaveTime) {
+      user.gameData.lastSaveTime = new Date(lastSaveTime);
+    }
+
+    // Sauvegarder les changements
+    await user.save();
+
+    res.json({
+      success: true,
+      data: {
+        coins: user.gameData.coins,
+        coinsPerClick: user.gameData.upgrades.clickPower.level,
+        coinsPerSecond: user.gameData.upgrades.autoClicker.level,
+        upgrades: user.gameData.upgrades,
+        lastSaveTime: user.gameData.lastSaveTime,
+      },
+    });
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde:", error);
+    res.status(500).json({
+      error: "Erreur lors de la sauvegarde",
+      message: error.message,
+    });
+  }
+});
+
 // Page 404
 app.use((req, res) => {
-  res.status(404).render("error", {
-    message: "Page non trouvée",
-  });
+  if (req.path.startsWith("/api/")) {
+    res.status(404).json({ error: "Route non trouvée" });
+  } else {
+    res.status(404).render("error", {
+      message: "Page non trouvée",
+    });
+  }
 });
 
 // Gestion globale des erreurs
 app.use((err, req, res, next) => {
   console.error("Erreur globale:", err);
-  res.status(500).render("error", {
-    message: "Une erreur est survenue",
-  });
+  if (req.path.startsWith("/api/")) {
+    res.status(500).json({
+      error: "Erreur interne du serveur",
+      message: err.message,
+    });
+  } else {
+    res.status(500).render("error", {
+      message: "Une erreur est survenue",
+    });
+  }
 });
 
 // Lancement du serveur
