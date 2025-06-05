@@ -457,3 +457,5 @@ if (process.env.NODE_ENV !== "production") {
     console.log(`Serveur démarré sur le port ${PORT}`);
   });
 }
+
+module.exports = serverless(app);
