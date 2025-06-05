@@ -38,9 +38,6 @@ const sessionStore = MongoStore.create({
   ttl: 24 * 60 * 60, // 1 jour
   touchAfter: 24 * 3600,
   autoRemove: "native",
-  /* crypto: {
-    secret: process.env.SESSION_SECRET || "votre_secret_tres_securise",
-  }, */
 });
 
 app.use(
@@ -51,11 +48,18 @@ app.use(
     store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 24 heures
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production", // true en production
+      sameSite: "none", // Nécessaire pour HTTPS
+      httpOnly: true,
+      domain:
+        process.env.NODE_ENV === "production" ? ".onrender.com" : undefined,
     },
+    proxy: true, // Nécessaire car Render utilise un proxy
   })
 );
+
+// Ajouter un middleware pour gérer le proxy
+app.set("trust proxy", 1);
 
 // Moteur de template
 app.use(expressLayouts);
