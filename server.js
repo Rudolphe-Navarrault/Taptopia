@@ -367,14 +367,29 @@ app.get("/settings", isAuthenticated, async (req, res) => {
   }
 });
 
-// Pour l'export Serverless Handler
+// Gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).render("error", {
+    message: "Page non trouvée",
+  });
+});
 
+// Gestion des erreurs globales
+app.use((err, req, res, next) => {
+  console.error("Erreur globale:", err);
+  res.status(500).render("error", {
+    message: "Une erreur est survenue",
+  });
+});
+
+// Export pour Vercel
 const handler = serverless(app);
 
-module.exports.handler = async (event, context) => {
+// Export par défaut pour Vercel
+module.exports = async (req, res) => {
   try {
     await connectToDatabase();
-    return await handler(event, context);
+    return handler(req, res);
   } catch (error) {
     console.error("Erreur dans handler serverless:", error);
     return {
