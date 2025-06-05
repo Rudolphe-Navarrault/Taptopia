@@ -10,18 +10,36 @@ require("dotenv").config();
 
 const app = express();
 
-// Configuration de la base de données avec gestion d'erreur
-mongoose
-  .connect(
-    process.env.MONGODB_URI ||
-      "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0"
-  )
-  .then(() => {
-    console.log("Connecté à MongoDB");
-  })
-  .catch((err) => {
-    console.error("Erreur de connexion à MongoDB:", err);
-  });
+// Gestion du cache de connexion MongoDB pour éviter les timeouts sur Vercel
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectToDatabase() {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(
+        process.env.MONGODB_URI ||
+          "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0",
+        {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        }
+      )
+      .then((mongoose) => {
+        return mongoose;
+      });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
 
 // Configuration des middlewares
 app.use(express.json());
@@ -82,7 +100,8 @@ const isAuthenticated = (req, res, next) => {
   next();
 };
 
-// Routes API
+// --- Routes API et vues ---
+
 app.get("/api/auth/check", (req, res) => {
   if (req.session.userId) {
     res.json({ userId: req.session.userId });
@@ -98,21 +117,13 @@ app.post("/api/test/add-data", isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Ajouter des données de test
     user.gameData.coins = 1000;
     user.gameData.upgrades = {
-      clickPower: {
-        level: 5,
-        cost: 100,
-      },
-      autoClicker: {
-        level: 3,
-        cost: 200,
-      },
+      clickPower: { level: 5, cost: 100 },
+      autoClicker: { level: 3, cost: 200 },
     };
     user.gameData.lastSaveTime = new Date();
 
-    // Sauvegarder les changements
     await user.save();
 
     res.json({
@@ -127,7 +138,6 @@ app.post("/api/test/add-data", isAuthenticated, async (req, res) => {
   }
 });
 
-// Routes de vues
 app.get("/", (req, res) => {
   res.render("index");
 });
@@ -140,12 +150,10 @@ app.get("/register", (req, res) => {
   res.render("register");
 });
 
-// Route d'inscription
 app.post("/auth/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(400).render("register", {
@@ -153,16 +161,10 @@ app.post("/auth/register", async (req, res) => {
       });
     }
 
-    // Créer un nouvel utilisateur
-    const user = new User({
-      username,
-      email,
-      password,
-    });
+    const user = new User({ username, email, password });
 
     await user.save();
 
-    // Créer la session
     req.session.userId = user._id;
     res.redirect("/dashboard");
   } catch (error) {
@@ -173,28 +175,24 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-// Route de connexion
 app.post("/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Trouver l'utilisateur
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).render("login", {
-        error: "Email ou mot de passe incorrect",
-      });
+      return res
+        .status(400)
+        .render("login", { error: "Email ou mot de passe incorrect" });
     }
 
-    // Vérifier le mot de passe
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).render("login", {
-        error: "Email ou mot de passe incorrect",
-      });
+      return res
+        .status(400)
+        .render("login", { error: "Email ou mot de passe incorrect" });
     }
 
-    // Créer la session
     req.session.userId = user._id;
     res.redirect("/dashboard");
   } catch (error) {
@@ -205,7 +203,6 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
-// Route de déconnexion
 app.get("/auth/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
@@ -216,7 +213,6 @@ app.get("/auth/logout", (req, res) => {
   });
 });
 
-// Route du dashboard
 app.get("/dashboard", async (req, res) => {
   if (!req.session.userId) {
     return res.redirect("/login");
@@ -236,7 +232,6 @@ app.get("/dashboard", async (req, res) => {
   }
 });
 
-// Route pour le clic
 app.post("/api/click", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -244,7 +239,6 @@ app.post("/api/click", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    // Renvoyer uniquement les données nécessaires pour le calcul côté client
     res.json({
       coinsPerClick: user.gameData.upgrades.clickPower.level || 1,
       coinsPerSecond: user.gameData.upgrades.autoClicker.level || 0,
@@ -256,7 +250,6 @@ app.post("/api/click", isAuthenticated, async (req, res) => {
   }
 });
 
-// Route pour les améliorations
 app.post("/api/upgrade", isAuthenticated, async (req, res) => {
   try {
     const { upgradeType } = req.body;
@@ -277,7 +270,6 @@ app.post("/api/upgrade", isAuthenticated, async (req, res) => {
       return res.status(400).json({ message: "Pas assez de pièces" });
     }
 
-    // Renvoyer uniquement les données nécessaires pour le calcul côté client
     res.json({
       cost: cost,
       currentLevel: upgrade.level,
@@ -290,7 +282,6 @@ app.post("/api/upgrade", isAuthenticated, async (req, res) => {
   }
 });
 
-// Route pour récupérer l'état du jeu
 app.get("/api/save", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -298,7 +289,6 @@ app.get("/api/save", isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Renvoyer toutes les données du jeu
     res.json({
       coins: user.gameData.coins,
       coinsPerClick: user.gameData.upgrades.clickPower.level,
@@ -323,7 +313,6 @@ app.get("/api/save", isAuthenticated, async (req, res) => {
   }
 });
 
-// Route pour récupérer les paramètres
 app.get("/api/settings", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -337,7 +326,6 @@ app.get("/api/settings", isAuthenticated, async (req, res) => {
   }
 });
 
-// Route pour mettre à jour les paramètres
 app.post("/api/settings", isAuthenticated, async (req, res) => {
   try {
     const { language, theme, notifications, autoSave } = req.body;
@@ -347,7 +335,6 @@ app.post("/api/settings", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    // Mettre à jour les paramètres
     user.settings = {
       language: language || "fr",
       theme: theme || "light",
@@ -356,7 +343,7 @@ app.post("/api/settings", isAuthenticated, async (req, res) => {
     };
 
     await user.save();
-    console.log("Paramètres sauvegardés:", user.settings); // Pour le débogage
+    console.log("Paramètres sauvegardés:", user.settings);
     res.json(user.settings);
   } catch (error) {
     console.error("Erreur lors de la mise à jour des paramètres:", error);
@@ -364,7 +351,6 @@ app.post("/api/settings", isAuthenticated, async (req, res) => {
   }
 });
 
-// Route pour la page des paramètres
 app.get("/settings", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -374,86 +360,26 @@ app.get("/settings", isAuthenticated, async (req, res) => {
     }
     res.render("settings", { user });
   } catch (error) {
-    console.error("Erreur lors de l'accès aux paramètres:", error);
+    console.error("Erreur lors du chargement des paramètres:", error);
     res.status(500).render("error", {
-      message: "Une erreur est survenue lors de l'accès aux paramètres",
+      message: "Erreur lors du chargement des paramètres",
     });
   }
 });
 
-// Route pour sauvegarder l'état du jeu
-app.post("/api/save", isAuthenticated, async (req, res) => {
-  try {
-    const user = await User.findById(req.session.userId);
-    if (!user) {
-      return res.status(404).json({ error: "Utilisateur non trouvé" });
-    }
+// Pour l'export Serverless Handler
 
-    const { coins, upgrades, lastSaveTime } = req.body;
-
-    // Vérifier que les données sont valides
-    if (typeof coins !== "number" || !upgrades) {
-      return res.status(400).json({ error: "Données invalides" });
-    }
-
-    // Mettre à jour les données du jeu
-    user.gameData.coins = coins;
-    user.gameData.upgrades = upgrades;
-    if (lastSaveTime) {
-      user.gameData.lastSaveTime = new Date(lastSaveTime);
-    }
-
-    // Sauvegarder les changements
-    await user.save();
-
-    res.json({
-      coins: user.gameData.coins,
-      coinsPerClick: user.gameData.upgrades.clickPower.level,
-      coinsPerSecond: user.gameData.upgrades.autoClicker.level,
-      upgrades: user.gameData.upgrades,
-      lastSaveTime: user.gameData.lastSaveTime,
-    });
-  } catch (error) {
-    console.error("Erreur lors de la sauvegarde:", error);
-    res.status(500).json({ error: "Erreur lors de la sauvegarde" });
-  }
-});
-
-// Gestion des erreurs 404
-app.use((req, res) => {
-  res.status(404).render("error", {
-    message: "Page non trouvée",
-  });
-});
-
-// Gestion des erreurs globales
-app.use((err, req, res, next) => {
-  console.error("Erreur globale:", err);
-  res.status(500).render("error", {
-    message: "Une erreur est survenue",
-  });
-});
-
-// Export pour Vercel
 const handler = serverless(app);
 
-// Wrapper pour gérer les erreurs de connexion MongoDB
 module.exports.handler = async (event, context) => {
   try {
+    await connectToDatabase();
     return await handler(event, context);
   } catch (error) {
-    console.error("Erreur serveurless:", error);
+    console.error("Erreur dans handler serverless:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Erreur interne du serveur" }),
     };
   }
 };
-
-// Démarrage du serveur en développement
-if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
-  });
-}
