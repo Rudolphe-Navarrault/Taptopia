@@ -94,6 +94,22 @@ const isAuthenticated = (req, res, next) => {
   next();
 };
 
+// Middleware pour vérifier si l'utilisateur est déjà connecté
+const isAlreadyAuthenticated = (req, res, next) => {
+  if (req.session.userId) {
+    return res.redirect("/dashboard");
+  }
+  next();
+};
+
+// Middleware pour protéger les routes qui nécessitent une authentification
+const requireAuth = (req, res, next) => {
+  if (!req.session.userId) {
+    return res.redirect("/login");
+  }
+  next();
+};
+
 // --- Routes API et vues ---
 
 app.get("/api/auth/check", (req, res) => {
@@ -132,15 +148,16 @@ app.post("/api/test/add-data", isAuthenticated, async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
+// Routes publiques avec redirection si déjà connecté
+app.get("/", isAlreadyAuthenticated, (req, res) => {
   res.render("index");
 });
 
-app.get("/login", (req, res) => {
+app.get("/login", isAlreadyAuthenticated, (req, res) => {
   res.render("login");
 });
 
-app.get("/register", (req, res) => {
+app.get("/register", isAlreadyAuthenticated, (req, res) => {
   res.render("register");
 });
 
@@ -165,6 +182,23 @@ app.post("/auth/register", async (req, res) => {
     console.error("Erreur lors de l'inscription:", error);
     res.status(500).render("register", {
       error: "Une erreur est survenue lors de l'inscription",
+    });
+  }
+});
+
+// Routes protégées
+app.get("/dashboard", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user) {
+      req.session.destroy();
+      return res.redirect("/login");
+    }
+    res.render("dashboard", { user });
+  } catch (error) {
+    console.error("Erreur lors de l'accès au dashboard:", error);
+    res.status(500).render("error", {
+      message: "Une erreur est survenue lors de l'accès au dashboard",
     });
   }
 });
@@ -205,12 +239,8 @@ app.post("/auth/login", async (req, res) => {
         }
 
         console.log("Session sauvegardée avec succès");
-        // Renvoyer une réponse JSON au lieu de rediriger
-        res.json({
-          success: true,
-          redirect: "/dashboard",
-          userId: user._id,
-        });
+        // Rediriger directement vers le dashboard
+        res.redirect("/dashboard");
       });
     });
   } catch (error) {
@@ -229,25 +259,6 @@ app.get("/auth/logout", (req, res) => {
     }
     res.redirect("/");
   });
-});
-
-app.get("/dashboard", async (req, res) => {
-  if (!req.session.userId) {
-    return res.redirect("/login");
-  }
-  try {
-    const user = await User.findById(req.session.userId);
-    if (!user) {
-      req.session.destroy();
-      return res.redirect("/login");
-    }
-    res.render("dashboard", { user });
-  } catch (error) {
-    console.error("Erreur lors de l'accès au dashboard:", error);
-    res.status(500).render("error", {
-      message: "Une erreur est survenue lors de l'accès au dashboard",
-    });
-  }
 });
 
 app.post("/api/click", isAuthenticated, async (req, res) => {
