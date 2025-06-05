@@ -303,13 +303,39 @@ app.get("/api/save", isAuthenticated, async (req, res) => {
   }
 });
 
+// Route pour la page des paramètres
+app.get("/settings", async (req, res) => {
+  if (!req.session.userId) {
+    return res.redirect("/login");
+  }
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user) {
+      req.session.destroy();
+      return res.redirect("/login");
+    }
+    res.render("settings", { user });
+  } catch (error) {
+    console.error("Erreur lors du chargement des paramètres:", error);
+    res.redirect("/dashboard");
+  }
+});
+
+// Route pour récupérer les paramètres
 app.get("/api/settings", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
-    res.json(user.settings);
+    res.json(
+      user.settings || {
+        language: "fr",
+        theme: "light",
+        notifications: true,
+        autoSave: "0",
+      }
+    );
   } catch (error) {
     console.error("Erreur lors de la récupération des paramètres:", error);
     res
@@ -318,19 +344,26 @@ app.get("/api/settings", isAuthenticated, async (req, res) => {
   }
 });
 
+// Route pour sauvegarder les paramètres
 app.post("/api/settings", isAuthenticated, async (req, res) => {
   try {
-    const { settings } = req.body;
+    const { language, theme, notifications, autoSave } = req.body;
     const user = await User.findById(req.session.userId);
 
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    user.settings = settings;
-    await user.save();
+    user.settings = {
+      language: language || "fr",
+      theme: theme || "light",
+      notifications: notifications !== undefined ? notifications : true,
+      autoSave: autoSave || "0",
+    };
 
-    res.json({ message: "Paramètres mis à jour" });
+    await user.save();
+    console.log("Paramètres sauvegardés:", user.settings);
+    res.json(user.settings);
   } catch (error) {
     console.error("Erreur lors de la mise à jour des paramètres:", error);
     res
@@ -385,13 +418,9 @@ app.post("/api/save", isAuthenticated, async (req, res) => {
 
 // Page 404
 app.use((req, res) => {
-  if (req.path.startsWith("/api/")) {
-    res.status(404).json({ error: "Route non trouvée" });
-  } else {
-    res.status(404).render("error", {
-      message: "Page non trouvée",
-    });
-  }
+  res.status(404).render("error", {
+    message: "Page non trouvée",
+  });
 });
 
 // Gestion globale des erreurs

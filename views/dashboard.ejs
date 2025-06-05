@@ -74,7 +74,17 @@
             <label for="language-select" data-translate="language"
               >Langue</label
             >
-            <select id="language-select" class="settings-select">
+            <select
+              id="language-select"
+              class="settings-select"
+              style="
+                appearance: none;
+                background-image: url('data:image/svg+xml;utf8,<svg fill=\'%23333\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>');
+                background-repeat: no-repeat;
+                background-position: right 8px center;
+                padding-right: 30px;
+              "
+            >
               <option value="fr">Français</option>
               <option value="en">English</option>
             </select>
@@ -82,7 +92,17 @@
 
           <div class="settings-item">
             <label for="theme-select" data-translate="theme">Thème</label>
-            <select id="theme-select" class="settings-select">
+            <select
+              id="theme-select"
+              class="settings-select"
+              style="
+                appearance: none;
+                background-image: url('data:image/svg+xml;utf8,<svg fill=\'%23333\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>');
+                background-repeat: no-repeat;
+                background-position: right 8px center;
+                padding-right: 30px;
+              "
+            >
               <option value="light" data-translate="lightTheme">Clair</option>
               <option value="dark" data-translate="darkTheme">Sombre</option>
             </select>
@@ -91,7 +111,17 @@
           <div class="settings-item">
             <label data-translate="autoSave">Sauvegarde automatique</label>
             <div class="settings-value-container">
-              <select id="auto-save-select" class="settings-select">
+              <select
+                id="auto-save-select"
+                class="settings-select"
+                style="
+                  appearance: none;
+                  background-image: url('data:image/svg+xml;utf8,<svg fill=\'%23333\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>');
+                  background-repeat: no-repeat;
+                  background-position: right 8px center;
+                  padding-right: 30px;
+                "
+              >
                 <option value="0" data-translate="autoSaveDisabled">
                   Désactivée
                 </option>
@@ -140,13 +170,56 @@
           </div>
         </div>
 
-        <button
-          id="save-settings"
-          class="btn btn-primary"
-          data-translate="save"
+        <div
+          class="settings-buttons"
+          style="
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 20px;
+          "
         >
-          Sauvegarder
-        </button>
+          <button
+            id="save-settings"
+            class="btn btn-primary"
+            data-translate="save"
+            style="
+              flex: 1;
+              width: 150px;
+              height: 40px;
+              font-size: 14px;
+              font-weight: 500;
+              line-height: 40px;
+              padding: 0;
+              margin: 0;
+              border-radius: 4px;
+            "
+          >
+            Sauvegarder
+          </button>
+          <button
+            id="cancel-settings"
+            class="btn btn-danger"
+            style="
+              flex: 1;
+              width: 150px;
+              height: 40px;
+              font-size: 14px;
+              font-weight: 500;
+              line-height: 40px;
+              padding: 0;
+              margin: 0;
+              border-radius: 4px;
+              background-color: #dc3545;
+              border-color: #dc3545;
+              color: white;
+              opacity: 0.5;
+              cursor: not-allowed;
+            "
+          >
+            Annuler
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -209,6 +282,9 @@
     const nav = document.querySelector("nav");
     const footer = document.querySelector("footer");
     let menuTimeout;
+    let originalSettings = null;
+    let currentSettings = null;
+    const cancelButton = document.getElementById("cancel-settings");
 
     // Cacher tous les menus au démarrage
     document.querySelectorAll(".menu-content").forEach((menu) => {
@@ -264,5 +340,107 @@
     if (upgradesMenu) {
       upgradesMenu.style.display = "block";
     }
+
+    // Fonction pour vérifier si les paramètres ont été modifiés
+    const hasSettingsChanged = () => {
+      if (!originalSettings || !currentSettings) return false;
+      return (
+        JSON.stringify(originalSettings) !== JSON.stringify(currentSettings)
+      );
+    };
+
+    // Fonction pour mettre à jour l'état du bouton Annuler
+    const updateCancelButton = () => {
+      if (hasSettingsChanged()) {
+        cancelButton.style.opacity = "1";
+        cancelButton.style.cursor = "pointer";
+      } else {
+        cancelButton.style.opacity = "0.5";
+        cancelButton.style.cursor = "not-allowed";
+      }
+    };
+
+    // Charger les paramètres actuels
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          originalSettings = await response.json();
+          currentSettings = { ...originalSettings };
+          updateCancelButton();
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des paramètres:", error);
+      }
+    };
+
+    // Fonction pour appliquer les paramètres
+    const applySettings = (settings) => {
+      document.documentElement.lang = settings.language;
+      document.body.className = settings.theme;
+
+      // Appliquer le thème à tous les éléments nécessaires
+      const elements = document.querySelectorAll(
+        ".sidebar, .sidebar-menu, .menu-content, .settings-dropdown, .settings-section, .settings-item, .settings-select, .stat-card, .game-area, .click-area, .save-container"
+      );
+      elements.forEach((element) => {
+        element.className =
+          element.className.replace(/light|dark/g, "") + " " + settings.theme;
+      });
+    };
+
+    // Gérer les changements de paramètres
+    document
+      .getElementById("language-select")
+      .addEventListener("change", () => {
+        currentSettings.language =
+          document.getElementById("language-select").value;
+        applySettings(currentSettings);
+        updateCancelButton();
+      });
+
+    document.getElementById("theme-select").addEventListener("change", () => {
+      currentSettings.theme = document.getElementById("theme-select").value;
+      applySettings(currentSettings);
+      updateCancelButton();
+    });
+
+    document
+      .getElementById("notifications-toggle")
+      .addEventListener("change", () => {
+        currentSettings.notifications = document.getElementById(
+          "notifications-toggle"
+        ).checked;
+        updateCancelButton();
+      });
+
+    document
+      .getElementById("auto-save-select")
+      .addEventListener("change", () => {
+        currentSettings.autoSave =
+          document.getElementById("auto-save-select").value;
+        updateCancelButton();
+      });
+
+    // Gérer le clic sur le bouton Annuler
+    cancelButton.addEventListener("click", () => {
+      if (hasSettingsChanged()) {
+        currentSettings = { ...originalSettings };
+        document.getElementById("language-select").value =
+          originalSettings.language;
+        document.getElementById("theme-select").value = originalSettings.theme;
+        document.getElementById("notifications-toggle").checked =
+          originalSettings.notifications;
+        document.getElementById("auto-save-select").value =
+          originalSettings.autoSave;
+        applySettings(originalSettings);
+        updateCancelButton();
+      }
+    });
+
+    // Charger les paramètres au démarrage
+    loadSettings().then(() => {
+      applySettings(originalSettings);
+    });
   });
 </script>
