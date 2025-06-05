@@ -3,7 +3,7 @@
   <% if (typeof error !== 'undefined' && error) { %>
   <div class="error-message"><%= error %></div>
   <% } %>
-  <form action="/auth/login" method="POST" class="auth-form">
+  <form id="login-form" method="POST" action="/auth/login">
     <div class="form-group">
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required />
@@ -12,9 +12,50 @@
       <label for="password">Mot de passe</label>
       <input type="password" id="password" name="password" required />
     </div>
-    <button type="submit" class="btn btn-primary">Se connecter</button>
+    <button type="submit">Se connecter</button>
+    <div id="error-message" class="error-message"></div>
   </form>
   <p class="auth-link">
     Pas encore de compte ? <a href="/register">S'inscrire</a>
   </p>
 </div>
+
+<script>
+  document
+    .getElementById("login-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+      const errorMessage = document.getElementById("error-message");
+      errorMessage.textContent = "";
+
+      try {
+        const response = await fetch("/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: form.email.value,
+            password: form.password.value,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Stocker l'ID utilisateur
+          localStorage.setItem("userId", data.userId);
+          // Rediriger vers le dashboard
+          window.location.href = data.redirect;
+        } else {
+          errorMessage.textContent = data.error || "Une erreur est survenue";
+        }
+      } catch (error) {
+        console.error("Erreur lors de la connexion:", error);
+        errorMessage.textContent =
+          "Une erreur est survenue lors de la connexion";
+      }
+    });
+</script>

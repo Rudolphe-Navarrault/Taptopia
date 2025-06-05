@@ -172,51 +172,52 @@ app.post("/auth/register", async (req, res) => {
 app.post("/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log("Tentative de connexion pour:", email);
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res
-        .status(400)
-        .render("login", { error: "Email ou mot de passe incorrect" });
+      console.log("Utilisateur non trouvé");
+      return res.status(400).json({ error: "Email ou mot de passe incorrect" });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res
-        .status(400)
-        .render("login", { error: "Email ou mot de passe incorrect" });
+      console.log("Mot de passe incorrect");
+      return res.status(400).json({ error: "Email ou mot de passe incorrect" });
     }
 
     // Créer une nouvelle session
     req.session.regenerate((err) => {
       if (err) {
         console.error("Erreur lors de la régénération de la session:", err);
-        return res.status(500).render("login", {
-          error: "Une erreur est survenue lors de la connexion",
-        });
+        return res.status(500).json({ error: "Erreur lors de la connexion" });
       }
 
       // Stocker l'ID de l'utilisateur dans la session
       req.session.userId = user._id;
+      console.log("Session créée avec l'ID:", user._id);
 
       // Sauvegarder la session
       req.session.save((err) => {
         if (err) {
           console.error("Erreur lors de la sauvegarde de la session:", err);
-          return res.status(500).render("login", {
-            error: "Une erreur est survenue lors de la connexion",
-          });
+          return res.status(500).json({ error: "Erreur lors de la connexion" });
         }
 
-        // Rediriger vers le dashboard
-        res.redirect("/dashboard");
+        console.log("Session sauvegardée avec succès");
+        // Renvoyer une réponse JSON au lieu de rediriger
+        res.json({
+          success: true,
+          redirect: "/dashboard",
+          userId: user._id,
+        });
       });
     });
   } catch (error) {
     console.error("Erreur lors de la connexion:", error);
-    res.status(500).render("login", {
-      error: "Une erreur est survenue lors de la connexion",
-    });
+    res
+      .status(500)
+      .json({ error: "Une erreur est survenue lors de la connexion" });
   }
 });
 
