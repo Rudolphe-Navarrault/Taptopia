@@ -31,6 +31,14 @@
       </footer>
     </div>
 
+    <!-- Translations -->
+    <script type="module" src="/js/translations/fr.js"></script>
+    <script type="module" src="/js/translations/en.js"></script>
+    <script type="module" src="/js/translations/index.js"></script>
+
+    <!-- Main script - chargé uniquement sur les pages qui en ont besoin -->
+    <% if (typeof skipMainJs === 'undefined' || !skipMainJs) { %>
     <script src="/js/main.js"></script>
+    <% } %>
   </body>
 </html>

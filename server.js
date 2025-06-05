@@ -80,8 +80,11 @@ app.use((err, req, res, next) => {
   }
 });
 
-// Passer userId aux vues
+// Middleware pour passer les variables globales aux vues
 app.use((req, res, next) => {
+  // Définir les pages qui ne doivent pas charger main.js
+  const pagesWithoutMainJs = ["/login", "/register"];
+  res.locals.skipMainJs = pagesWithoutMainJs.includes(req.path);
   res.locals.userId = req.session.userId;
   next();
 });
