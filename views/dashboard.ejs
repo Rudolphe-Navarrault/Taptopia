@@ -4,11 +4,17 @@
 <!-- Sidebar -->
 <div class="sidebar">
   <div class="sidebar-icons">
+    <button class="sidebar-icon" data-menu="game">
+      <i class="fas fa-gamepad"></i>
+    </button>
     <button class="sidebar-icon" data-menu="upgrades">
       <i class="fas fa-arrow-up"></i>
     </button>
     <button class="sidebar-icon" data-menu="achievements">
       <i class="fas fa-trophy"></i>
+    </button>
+    <button class="sidebar-icon" data-menu="users">
+      <i class="fas fa-users"></i>
     </button>
     <button class="sidebar-icon" data-menu="settings">
       <i class="fas fa-cog"></i>
@@ -222,6 +228,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Menu des utilisateurs -->
+    <div class="menu-content" id="users-menu">
+      <h3 data-translate="users">Utilisateurs</h3>
+      <div class="users-list">
+        <div class="users-header">
+          <span class="user-rank">#</span>
+          <span class="user-name">Nom</span>
+          <span class="user-coins">Pièces</span>
+          <span class="user-level">Niveau</span>
+        </div>
+        <div id="users-container">
+          <!-- Les utilisateurs seront chargés ici dynamiquement -->
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -273,6 +295,57 @@
 
 <!-- Main script -->
 <script src="/js/main.js"></script>
+
+<style>
+  .users-list {
+    padding: 15px;
+  }
+
+  .users-header {
+    display: grid;
+    grid-template-columns: 50px 2fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--card-bg);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+
+  .user-item {
+    display: grid;
+    grid-template-columns: 50px 2fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--card-bg);
+    border-radius: 4px;
+    margin-bottom: 5px;
+    transition: transform 0.2s ease;
+  }
+
+  .user-item:hover {
+    transform: translateX(5px);
+  }
+
+  .user-rank {
+    text-align: center;
+    font-weight: bold;
+  }
+
+  .user-name {
+    font-weight: 500;
+  }
+
+  .user-coins,
+  .user-level {
+    text-align: right;
+  }
+
+  .current-user {
+    background-color: var(--primary-color);
+    color: white;
+  }
+</style>
 
 <script>
   // Initialisation du menu au chargement
@@ -442,5 +515,47 @@
     loadSettings().then(() => {
       applySettings(originalSettings);
     });
+  });
+
+  // Fonction pour charger la liste des utilisateurs
+  async function loadUsers() {
+    try {
+      const response = await fetch("/api/users");
+      if (response.ok) {
+        const users = await response.json();
+        const usersContainer = document.getElementById("users-container");
+        usersContainer.innerHTML = "";
+
+        users.sort((a, b) => b.gameData.coins - a.gameData.coins);
+
+        users.forEach((user, index) => {
+          const userElement = document.createElement("div");
+          userElement.className = "user-item";
+          if (user._id === localStorage.getItem("userId")) {
+            userElement.classList.add("current-user");
+          }
+
+          userElement.innerHTML = `
+            <span class="user-rank">${index + 1}</span>
+            <span class="user-name">${user.username}</span>
+            <span class="user-coins">${user.gameData.coins.toLocaleString()}</span>
+            <span class="user-level">${
+              user.gameData.upgrades.clickPower.level
+            }</span>
+          `;
+
+          usersContainer.appendChild(userElement);
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des utilisateurs:", error);
+    }
+  }
+
+  // Charger les utilisateurs au chargement de la page
+  document.addEventListener("DOMContentLoaded", () => {
+    loadUsers();
+    // Recharger la liste toutes les 30 secondes
+    setInterval(loadUsers, 30000);
   });
 </script>

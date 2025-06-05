@@ -344,6 +344,26 @@ app.get("/api/settings", isAuthenticated, async (req, res) => {
   }
 });
 
+// Route pour récupérer la liste des utilisateurs
+app.get("/api/users", isAuthenticated, async (req, res) => {
+  try {
+    const users = await User.find(
+      {},
+      {
+        username: 1,
+        gameData: 1,
+        _id: 1,
+      }
+    ).sort({ "gameData.coins": -1 });
+    res.json(users);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des utilisateurs:", error);
+    res
+      .status(500)
+      .json({ error: "Erreur lors de la récupération des utilisateurs" });
+  }
+});
+
 // Route pour sauvegarder les paramètres
 app.post("/api/settings", isAuthenticated, async (req, res) => {
   try {
