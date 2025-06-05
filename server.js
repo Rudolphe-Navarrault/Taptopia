@@ -10,12 +10,13 @@ require("dotenv").config();
 
 const app = express();
 
-// Configuration de la connexion MongoDB avec cache global
+// Configuration de la connexion MongoDB avec timeout
 mongoose.set("strictQuery", false);
 const MONGODB_URI =
   process.env.MONGODB_URI ||
   "mongodb+srv://rudolphenavarrault:rJvENWPjE4fSPhJi@cluster0.vnw8k31.mongodb.net/idle_clicker?retryWrites=true&w=majority&appName=Cluster0";
 
+// Gestion du cache de connexion MongoDB pour éviter les timeouts sur Vercel
 let cached = global.mongoose;
 
 if (!cached) {
@@ -24,55 +25,57 @@ if (!cached) {
 
 async function connectToDatabase() {
   if (cached.conn) {
-    console.log("Réutilisation connexion MongoDB existante");
     return cached.conn;
   }
 
   if (!cached.promise) {
-    console.log("Création nouvelle connexion MongoDB...");
-    cached.promise = mongoose
-      .connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 10000,
-        socketTimeoutMS: 45000,
-        maxPoolSize: 10,
-      })
-      .then((mongoose) => {
-        console.log("Connexion MongoDB établie");
-        return mongoose;
-      })
-      .catch((err) => {
-        console.error("Erreur connexion MongoDB:", err);
-        cached.promise = null;
-        throw err;
-      });
+    const opts = {
+      serverSelectionTimeoutMS: 5000, // Timeout après 5 secondes
+      socketTimeoutMS: 45000, // Timeout socket après 45 secondes
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      maxIdleTimeMS: 60000,
+      connectTimeoutMS: 10000,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
+    });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
   return cached.conn;
 }
 
-// Connexion MongoDB au démarrage (cold start)
-connectToDatabase().catch((err) => {
-  console.error("Erreur connexion initiale MongoDB:", err);
-});
+// Connexion MongoDB au démarrage (une seule fois)
+console.log("Création nouvelle connexion MongoDB...");
+connectToDatabase()
+  .then(() => {
+    console.log("Connexion MongoDB établie");
+  })
+  .catch((err) => {
+    console.error("Erreur de connexion MongoDB:", err);
+  });
 
 // Configuration des middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir les fichiers statiques en priorité
-app.use(express.static(path.join(__dirname, "public")));
-
+// Configuration des sessions avec MongoDB
 const sessionStore = MongoStore.create({
   mongoUrl: MONGODB_URI,
   ttl: 24 * 60 * 60, // 1 jour
+  touchAfter: 24 * 3600, // 24 heures
+  autoRemove: "native",
   crypto: {
     secret: process.env.SESSION_SECRET || "votre_secret_tres_securise",
   },
-});
-
-sessionStore.on("error", (error) => {
-  console.error("Erreur session store:", error);
 });
 
 app.use(
@@ -94,6 +97,9 @@ app.use(expressLayouts);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.set("layout", "layout");
+
+// Servir les fichiers statiques
+app.use(express.static(path.join(__dirname, "public")));
 
 // Middleware pour gérer les erreurs JSON
 app.use((err, req, res, next) => {
@@ -354,20 +360,53 @@ app.post("/api/settings", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    user.settings.language = language || user.settings.language;
-    user.settings.theme = theme || user.settings.theme;
-    user.settings.notifications = notifications ?? user.settings.notifications;
-    user.settings.autoSave = autoSave ?? user.settings.autoSave;
+    user.settings = {
+      language: language || "fr",
+      theme: theme || "light",
+      notifications: notifications !== undefined ? notifications : true,
+      autoSave: autoSave || "0",
+    };
 
     await user.save();
-
-    res.json({ message: "Paramètres mis à jour avec succès" });
+    console.log("Paramètres sauvegardés:", user.settings);
+    res.json(user.settings);
   } catch (error) {
     console.error("Erreur lors de la mise à jour des paramètres:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
 
-const handler = serverless(app);
+app.get("/settings", isAuthenticated, async (req, res) => {
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user) {
+      req.session.destroy();
+      return res.redirect("/login");
+    }
+    res.render("settings", { user });
+  } catch (error) {
+    console.error("Erreur lors du chargement des paramètres:", error);
+    res.status(500).render("error", {
+      message: "Erreur lors du chargement des paramètres",
+    });
+  }
+});
 
+// Gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).render("error", {
+    message: "Page non trouvée",
+  });
+});
+
+// Gestion des erreurs globales
+app.use((err, req, res, next) => {
+  console.error("Erreur globale:", err);
+  res.status(500).render("error", {
+    message: "Une erreur est survenue",
+  });
+});
+
+// Export pour Vercel sans reconnecter MongoDB à chaque requête
+const handler = serverless(app);
 module.exports = handler;
