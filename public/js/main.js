@@ -758,37 +758,28 @@ if (window.gameScriptLoaded) {
     }
   }
 
-  // Fonction pour vérifier l'authentification avec retry
-  async function checkAuthWithRetry(maxRetries = 3, delay = 1000) {
-    for (let i = 0; i < maxRetries; i++) {
+  // Initialisation au chargement de la page
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Ne vérifier l'authentification que sur les pages qui en ont besoin
+    const currentPath = window.location.pathname;
+    const publicPaths = ["/", "/login", "/register"];
+
+    if (!publicPaths.includes(currentPath)) {
+      // Vérifier si l'utilisateur est connecté
       try {
         const response = await fetch("/api/auth/check");
         if (response.ok) {
           const data = await response.json();
           if (data.userId) {
             localStorage.setItem("userId", data.userId);
-            return true;
           }
         }
-        // Attendre avant de réessayer
-        await new Promise((resolve) => setTimeout(resolve, delay));
       } catch (error) {
-        console.error(`Tentative ${i + 1} échouée:`, error);
-        if (i < maxRetries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
+        console.error(
+          "Erreur lors de la vérification de l'authentification:",
+          error
+        );
       }
-    }
-    return false;
-  }
-
-  // Initialisation au chargement de la page
-  document.addEventListener("DOMContentLoaded", async () => {
-    // Vérifier l'authentification avec retry
-    const isAuthenticated = await checkAuthWithRetry();
-    if (!isAuthenticated) {
-      console.error("Échec de l'authentification");
-      return;
     }
 
     // Charger les paramètres
